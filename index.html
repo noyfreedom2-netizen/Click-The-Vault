@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Warehouse | Click Love</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { 
+            --bg-black: #050505; 
+            --glow-gold: rgba(212, 175, 55, 0.6);
+            --glow-rose: rgba(183, 110, 121, 0.6);
+            --glow-truth: rgba(139, 0, 0, 0.7);
+            --glow-eternal: rgba(255, 255, 255, 0.6);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        body { background-color: var(--bg-black); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+        /* --- INTRO SCREEN --- */
+        #intro-screen { position: fixed; inset: 0; background: black; z-index: 5000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; transition: opacity 2s ease; }
+        .intro-quote { opacity: 0; transform: translateY(20px); transition: all 1.5s ease; margin-bottom: 25px; letter-spacing: 3px; font-weight: 300; font-size: 15px; color: #aaa; }
+        .intro-quote.visible { opacity: 1; transform: translateY(0); }
+        .intro-quote.highlight { color: #fff; font-size: 18px; letter-spacing: 8px; }
+        
+        #loading-info { color: #444; font-size: 10px; letter-spacing: 2px; margin-top: 30px; }
+        #start-btn { opacity: 0; background: transparent; border: 1px solid #fff; color: #fff; padding: 15px 45px; cursor: pointer; letter-spacing: 4px; transition: 1.5s; text-transform: uppercase; margin-top: 20px; display: none; }
+        #start-btn.visible { opacity: 1; display: block; }
+
+        /* --- CARD SYSTEM --- */
+        #warehouse-app { text-align: center; width: 100%; max-width: 450px; opacity: 0; transition: opacity 1.5s; padding: 20px; display: none; }
+        #warehouse-app.active { display: block; opacity: 1; }
+        .tracker-info { font-size: 10px; color: #666; letter-spacing: 3px; margin-bottom: 20px; text-transform: uppercase; }
+        
+        .card-container { position: relative; width: 100%; max-width: 320px; aspect-ratio: 2/3; margin: 0 auto 30px; border-radius: 18px; transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
+        .card-image-layer { width: 100%; height: 100%; border-radius: 18px; background-size: contain; background-position: center; background-repeat: no-repeat; animation: pulseGlow 2.5s infinite alternate; }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 15px var(--current-glow); }
+            100% { box-shadow: 0 0 45px var(--current-glow), 0 0 15px rgba(255,255,255,0.2); }
+        }
+
+        .tier-1 { --current-glow: var(--glow-gold); }
+        .tier-2 { --current-glow: var(--glow-rose); }
+        .tier-3 { --current-glow: var(--glow-truth); }
+        .tier-4 { --current-glow: var(--glow-eternal); }
+
+        .controls { display:flex; justify-content: center; gap: 15px; }
+        .nav-btn { padding: 14px 0; width: 115px; border-radius: 30px; border: 1px solid #333; background: transparent; color: white; cursor: pointer; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+        .btn-next { background: white !important; color: black !important; border: none !important; font-weight: bold; }
+
+        /* --- FINAL SCREEN --- */
+        #final-overlay { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a1a1a 0%, #000 85%); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 2s; padding: 20px; }
+        #final-overlay.active { opacity: 1; pointer-events: auto; }
+        .final-box { padding: 40px 25px; width: 100%; max-width: 400px; background: rgba(0,0,0,0.95); border: 1px solid #fff; text-align: center; border-radius: 8px; box-shadow: 0 0 50px rgba(255,255,255,0.1); }
+        
+        textarea { width: 100%; height: 80px; background: rgba(255,255,255,0.03); color: white; border: 1px solid #333; margin: 15px 0; padding: 12px; text-align: center; font-family: inherit; resize: none; }
+        .sig-container { display: flex; gap: 12px; margin-bottom: 20px; }
+        .sig-canvas { width: 100%; height: 80px; background: #080808; border: 1px dashed #444; border-radius: 4px; touch-action: none; }
+        #seal-btn { background: white; color: black; width: 100%; padding: 18px; border: none; font-weight: bold; cursor: pointer; letter-spacing: 5px; text-transform: uppercase; }
+        .flash { position: fixed; inset: 0; background: white; z-index: 6000; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<audio id="bg-music" loop></audio>
+<audio id="click-sfx" src="click.mp3"></audio>
+<div id="flash-effect" class="flash"></div>
+
+<div id="intro-screen">
+    <div id="intro-text-container">
+        <p class="intro-quote" id="q1">ยินดีต้อนรับสู่พื้นที่ส่วนตัวของคุณ</p>
+        <p class="intro-quote" id="q2">วางโลกภายนอกไว้ชั่วคราว</p>
+        <p class="intro-quote" id="q3">แล้วใช้เวลาฟังเสียงหัวใจของกันและกัน</p>
+        <p class="intro-quote highlight" id="q4">WAREHOUSE</p>
+    </div>
+    <div id="loading-info">PRELOADING WAREHOUSE ASSETS...</div>
+    <button id="start-btn" onclick="startExperience()">OPEN YOUR HEART</button>
+</div>
+
+<div id="warehouse-app">
+    <div class="tracker-info">
+        CARD: <span id="card-count">1</span>/40 | SKIPPED: <span id="skip-count">0</span>
+    </div>
+    <div id="card-wrapper" class="card-container tier-1">
+        <div id="card-image" class="card-image-layer"></div>
+    </div>
+    <div class="controls">
+        <button class="nav-btn" onclick="handleSkip()">Skip</button>
+        <button class="nav-btn btn-next" onclick="handleNext()">Next Card</button>
+    </div>
+</div>
+
+<div id="final-overlay">
+    <div class="final-box" id="capture-area">
+        <h2 style="letter-spacing: 8px; font-weight: 300; margin: 0; color: #fff;">THE ETERNAL BOUND</h2>
+        <div style="font-size: 9px; color: #666; letter-spacing: 2px; margin-top: 10px;">
+            PLAYED: <span id="res-play">0</span> | SKIPPED: <span id="res-skip">0</span>
+        </div>
+        <div style="width:30px; height:1px; background:#fff; margin:15px auto; opacity:0.5;"></div>
+        <textarea id="user-message" placeholder="บันทึกคำสัญญา..."></textarea>
+        <div class="sig-container">
+            <div style="flex:1;"><canvas id="sig-1" class="sig-canvas"></canvas><div style="font-size:7px; color:#444; margin-top:5px;">SIGNATURE 1</div></div>
+            <div style="flex:1;"><canvas id="sig-2" class="sig-canvas"></canvas><div style="font-size:7px; color:#444; margin-top:5px;">SIGNATURE 2</div></div>
+        </div>
+        <button id="seal-btn" onclick="archiveMemory()">SEAL THE BOUND</button>
+        <p style="font-size:8px; margin-top:25px; opacity:0.2; letter-spacing:5px;">WAREHOUSE • 2026</p>
+    </div>
+</div>
+
+<script>
+    let currentIndex = 1;
+    let skipCount = 0;
+    let playedCount = 0;
+    let currentTier = 0;
+    const totalCards = 40;
+
+    // --- ANTI-DELAY: PRELOAD IMAGES ---
+    function preloadImages() {
+        let loaded = 0;
+        for (let i = 1; i <= totalCards; i++) {
+            const img = new Image();
+            img.src = `ไพ่ใบที่ ${i}.png`;
+            img.onload = () => {
+                loaded++;
+                if (loaded === totalCards) {
+                    document.getElementById('loading-info').style.display = 'none';
+                    document.getElementById('start-btn').classList.add('visible');
+                }
+            };
+            img.onerror = () => { // ป้องกันค้างถ้าบางรูปโหลดไม่ได้
+                loaded++;
+                if (loaded === totalCards) showStart();
+            };
+        }
+    }
+
+    window.onload = () => {
+        preloadImages();
+        ['q1', 'q2', 'q3', 'q4'].forEach((id, i) => {
+            setTimeout(() => document.getElementById(id).classList.add('visible'), 1200 * (i + 1));
+        });
+    };
+
+    function startExperience() {
+        playMusic(1);
+        document.getElementById('intro-screen').style.opacity = "0";
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.display = "none";
+            document.getElementById('warehouse-app').style.display = "block";
+            setTimeout(() => document.getElementById('warehouse-app').classList.add('active'), 50);
+            updateCard();
+        }, 1500);
+    }
+
+    function playMusic(tier) {
+        if (currentTier === tier) return;
+        currentTier = tier;
+        const music = document.getElementById('bg-music');
+        let fadeOut = setInterval(() => {
+            if (music.volume > 0.05) music.volume -= 0.05;
+            else {
+                clearInterval(fadeOut);
+                music.src = `tier${tier}.mp3`;
+                music.play().catch(() => {});
+                let fadeIn = setInterval(() => {
+                    if (music.volume < 0.4) music.volume += 0.05;
+                    else clearInterval(fadeIn);
+                }, 150);
+            }
+        }, 50);
+    }
+
+    function updateCard() {
+        document.getElementById('card-count').innerText = currentIndex;
+        const wrapper = document.getElementById('card-wrapper');
+        const img = document.getElementById('card-image');
+        wrapper.style.opacity = "0";
+        wrapper.style.transform = "scale(0.95)";
+        
+        setTimeout(() => {
+            let tier = 1;
+            if(currentIndex > 32) tier = 4;
+            else if(currentIndex > 20) tier = 3;
+            else if(currentIndex > 8) tier = 2;
+            
+            wrapper.className = `card-container tier-${tier}`;
+            playMusic(tier);
+            img.style.backgroundImage = `url('ไพ่ใบที่ ${currentIndex}.png')`;
+            wrapper.style.opacity = "1";
+            wrapper.style.transform = "scale(1)";
+        }, 400);
+    }
+
+    function handleNext() {
+        playSfx();
+        playedCount++;
+        nextLogic();
+    }
+
+    function handleSkip() {
+        playSfx();
+        skipCount++;
+        document.getElementById('skip-count').innerText = skipCount;
+        nextLogic();
+    }
+
+    function nextLogic() {
+        if (currentIndex < totalCards) {
+            currentIndex++;
+            updateCard();
+        } else {
+            showFinal();
+        }
+    }
+
+    function playSfx() {
+        const sfx = document.getElementById('click-sfx');
+        sfx.currentTime = 0; sfx.play();
+    }
+
+    function showFinal() {
+        document.getElementById('res-play').innerText = playedCount;
+        document.getElementById('res-skip').innerText = skipCount;
+        document.getElementById('warehouse-app').style.opacity = "0";
+        setTimeout(() => {
+            document.getElementById('final-overlay').classList.add('active');
+            initCanvas();
+        }, 1000);
+    }
+
+    function initCanvas() {
+        ['sig-1', 'sig-2'].forEach(id => {
+            const canvas = document.getElementById(id);
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+            ctx.strokeStyle = "white"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+            let drawing = false;
+            const draw = (e) => {
+                if(!drawing) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            };
+            canvas.addEventListener('mousedown', () => drawing = true);
+            canvas.addEventListener('touchstart', e => { drawing = true; e.preventDefault(); });
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('touchmove', e => { draw(e); e.preventDefault(); });
+            window.addEventListener('mouseup', () => { drawing = false; ctx.beginPath(); });
+            window.addEventListener('touchend', () => { drawing = false; ctx.beginPath(); });
+        });
+    }
+
+    function archiveMemory() {
+        const flash = document.getElementById('flash-effect');
+        flash.style.opacity = "1";
+        html2canvas(document.getElementById('capture-area'), { backgroundColor: "#000", scale: 2 }).then(canvas => {
+            setTimeout(() => {
+                flash.style.opacity = "0";
+                const link = document.createElement('a');
+                link.download = 'Warehouse_Eternal.png';
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                alert("บันทึกสัญญารักเรียบร้อย");
+                location.reload();
+            }, 500);
+        });
+    }
+</script>
+</body>
+</html>
